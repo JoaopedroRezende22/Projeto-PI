@@ -174,12 +174,161 @@ static void testar_multiplos_caminhos_criticos(void) {
     grafo_liberar(&g);
 }
 
+static void testar_atividades_independentes(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 1));
+
+    const char *atividades[] = {"A", "B", "C"};
+    const int duracoes[] = {2, 5, 3};
+
+    for (size_t i = 0; i < 3; ++i) {
+        assert(grafo_adicionar_vertice(&g, atividades[i]));
+        assert(grafo_definir_duracao(&g, atividades[i], duracoes[i]));
+    }
+
+    size_t n = g.quantidade_vertices;
+
+    int *inicio_cedo = malloc(n * sizeof(int));
+    int *termino_cedo = malloc(n * sizeof(int));
+    int *inicio_tarde = malloc(n * sizeof(int));
+    int *termino_tarde = malloc(n * sizeof(int));
+    int *folgas = NULL;
+    int *eh_critica = NULL;
+
+    assert(inicio_cedo && termino_cedo &&
+           inicio_tarde && termino_tarde);
+
+    int duracao_projeto = 0;
+
+    assert(grafo_tempos_mais_cedo(
+        &g, inicio_cedo, termino_cedo, &duracao_projeto));
+
+    assert(duracao_projeto == 5);
+
+    assert(grafo_tempos_mais_tarde(
+        &g, inicio_tarde, termino_tarde, duracao_projeto));
+
+    assert(grafo_calcular_folgas(
+        &g, inicio_cedo, inicio_tarde, &folgas));
+
+    assert(grafo_identificar_caminho_critico(
+        &g, folgas, &eh_critica));
+
+    int a = grafo_indice_vertice(&g, "A");
+    int b = grafo_indice_vertice(&g, "B");
+    int c = grafo_indice_vertice(&g, "C");
+
+    assert(a >= 0 && b >= 0 && c >= 0);
+
+    assert(folgas[a] == 3);
+    assert(folgas[b] == 0);
+    assert(folgas[c] == 2);
+
+    assert(eh_critica[a] == 0);
+    assert(eh_critica[b] == 1);
+    assert(eh_critica[c] == 0);
+
+    printf("\nTeste de atividades independentes:\n");
+    printf("Duracao do projeto: %d dias\n", duracao_projeto);
+
+    assert(grafo_imprimir_caminhos_criticos(
+        &g, inicio_cedo, termino_cedo,
+        eh_critica, duracao_projeto));
+
+    free(inicio_cedo);
+    free(termino_cedo);
+    free(inicio_tarde);
+    free(termino_tarde);
+    free(folgas);
+    free(eh_critica);
+
+    grafo_liberar(&g);
+}
+
+
+static void testar_atividades_duracao_zero(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 1));
+
+    const char *atividades[] = {"A", "B", "C"};
+    const int duracoes[] = {2, 0, 3};
+
+    for (size_t i = 0; i < 3; ++i) {
+        assert(grafo_adicionar_vertice(&g, atividades[i]));
+        assert(grafo_definir_duracao(&g, atividades[i], duracoes[i]));
+    }
+
+    assert(grafo_adicionar_aresta(&g, "A", "B"));
+    assert(grafo_adicionar_aresta(&g, "B", "C"));
+
+    size_t n = g.quantidade_vertices;
+
+    int *inicio_cedo = malloc(n * sizeof(int));
+    int *termino_cedo = malloc(n * sizeof(int));
+    int *inicio_tarde = malloc(n * sizeof(int));
+    int *termino_tarde = malloc(n * sizeof(int));
+    int *folgas = NULL;
+    int *eh_critica = NULL;
+
+    assert(inicio_cedo && termino_cedo &&
+           inicio_tarde && termino_tarde);
+
+    int duracao_projeto = 0;
+
+    assert(grafo_tempos_mais_cedo(
+        &g, inicio_cedo, termino_cedo, &duracao_projeto));
+
+    assert(duracao_projeto == 5);
+
+    assert(grafo_tempos_mais_tarde(
+        &g, inicio_tarde, termino_tarde, duracao_projeto));
+
+    assert(grafo_calcular_folgas(
+        &g, inicio_cedo, inicio_tarde, &folgas));
+
+    assert(grafo_identificar_caminho_critico(
+        &g, folgas, &eh_critica));
+
+    for (size_t i = 0; i < n; ++i) {
+        assert(folgas[i] == 0);
+        assert(eh_critica[i] == 1);
+    }
+
+    int a = grafo_indice_vertice(&g, "A");
+    int b = grafo_indice_vertice(&g, "B");
+    int c = grafo_indice_vertice(&g, "C");
+
+    assert(a >= 0 && b >= 0 && c >= 0);
+
+    assert(inicio_cedo[a] == 0 && termino_cedo[a] == 2);
+    assert(inicio_cedo[b] == 2 && termino_cedo[b] == 2);
+    assert(inicio_cedo[c] == 2 && termino_cedo[c] == 5);
+
+    printf("\nTeste de atividades com duracao zero:\n");
+    printf("Duracao do projeto: %d dias\n", duracao_projeto);
+
+    assert(grafo_imprimir_caminhos_criticos(
+        &g, inicio_cedo, termino_cedo,
+        eh_critica, duracao_projeto));
+
+    free(inicio_cedo);
+    free(termino_cedo);
+    free(inicio_tarde);
+    free(termino_tarde);
+    free(folgas);
+    free(eh_critica);
+
+    grafo_liberar(&g);
+}
+
 int main(void) {
     testar_dag();
     testar_ciclo();
     testar_nao_direcionado();
     testar_conectividade_forte();
     testar_multiplos_caminhos_criticos();
+    testar_atividades_independentes();
+    testar_atividades_duracao_zero();
     printf("Todos os testes passaram.\n");
     return 0;
 }
