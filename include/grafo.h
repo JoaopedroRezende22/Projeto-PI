@@ -87,6 +87,15 @@ int grafo_identificar_caminho_critico(
     int **eh_critica
 );
 
+/* PERT/CPM: impressao de todos os caminhos criticos */
+int grafo_imprimir_caminhos_criticos(
+    const Grafo *g,
+    const int *inicio_mais_cedo,
+    const int *termino_mais_cedo,
+    const int *eh_critica,
+    int duracao_projeto
+);
+
 int grafo_vertices_articulacao(const Grafo *g, int **eh_articulacao);
 int grafo_pontes(const Grafo *g, int **eh_ponte);
 

@@ -511,6 +511,139 @@ int grafo_identificar_caminho_critico(
     return 1;
 }
 
+static void reconstruir_caminhos_criticos(
+    const Grafo *g,
+    size_t atual,
+    const int *inicio_mais_cedo,
+    const int *termino_mais_cedo,
+    const int *eh_critica,
+    int duracao_projeto,
+    size_t *caminho,
+    size_t profundidade,
+    size_t *quantidade_caminhos
+) {
+    caminho[profundidade] = atual;
+
+    int possui_sucessora_critica = 0;
+
+    for (Adjacente *a = g->vertices[atual].lista;
+         a;
+         a = a->proximo) {
+
+        size_t sucessora = a->destino;
+
+        if (eh_critica[sucessora] &&
+            inicio_mais_cedo[sucessora] == termino_mais_cedo[atual]) {
+
+            possui_sucessora_critica = 1;
+
+            reconstruir_caminhos_criticos(
+                g,
+                sucessora,
+                inicio_mais_cedo,
+                termino_mais_cedo,
+                eh_critica,
+                duracao_projeto,
+                caminho,
+                profundidade + 1,
+                quantidade_caminhos
+            );
+        }
+    }
+
+    if (!possui_sucessora_critica &&
+        termino_mais_cedo[atual] == duracao_projeto) {
+
+        printf("Caminho critico %zu: ", *quantidade_caminhos + 1);
+
+        for (size_t i = 0; i <= profundidade; ++i) {
+            printf("%s", g->vertices[caminho[i]].rotulo);
+
+            if (i < profundidade) {
+                printf(" -> ");
+            }
+        }
+
+        printf("\n");
+        (*quantidade_caminhos)++;
+    }
+}
+
+
+int grafo_imprimir_caminhos_criticos(
+    const Grafo *g,
+    const int *inicio_mais_cedo,
+    const int *termino_mais_cedo,
+    const int *eh_critica,
+    int duracao_projeto
+) {
+    if (!g || !inicio_mais_cedo || !termino_mais_cedo ||
+        !eh_critica || !g->direcionado ||
+        g->quantidade_vertices == 0 || duracao_projeto < 0) {
+        return 0;
+    }
+
+    size_t n = g->quantidade_vertices;
+    size_t *caminho = malloc(n * sizeof(size_t));
+
+    if (!caminho) {
+        return 0;
+    }
+
+    size_t quantidade_caminhos = 0;
+
+    for (size_t i = 0; i < n; ++i) {
+        if (!eh_critica[i] || inicio_mais_cedo[i] != 0) {
+            continue;
+        }
+
+        int possui_predecessora_critica = 0;
+
+for (size_t u = 0; u < n; ++u) {
+    for (Adjacente *a = g->vertices[u].lista;
+         a;
+         a = a->proximo) {
+
+        if (a->destino == i &&
+            eh_critica[u] &&
+            termino_mais_cedo[u] == inicio_mais_cedo[i]) {
+
+            possui_predecessora_critica = 1;
+            break;
+        }
+    }
+
+    if (possui_predecessora_critica) {
+        break;
+    }
+}
+
+if (!possui_predecessora_critica &&
+    inicio_mais_cedo[i] == 0) {
+            reconstruir_caminhos_criticos(
+                g,
+                i,
+                inicio_mais_cedo,
+                termino_mais_cedo,
+                eh_critica,
+                duracao_projeto,
+                caminho,
+                0,
+                &quantidade_caminhos
+            );
+        }
+    }
+
+    free(caminho);
+
+    if (quantidade_caminhos == 0) {
+        printf("Nenhum caminho critico completo foi encontrado.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
 int grafo_ordenacao_topologica_dfs(const Grafo *g, size_t **ordem, size_t *tamanho) {
     if (!g || !ordem || !tamanho) return 0;
     *ordem = NULL; *tamanho = 0;

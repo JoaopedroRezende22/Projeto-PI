@@ -101,11 +101,85 @@ static void testar_conectividade_forte(void) {
     grafo_liberar(&g);
 }
 
+
+static void testar_multiplos_caminhos_criticos(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 1));
+
+    /* Criacao das atividades e suas duracoes */
+    const char *atividades[] = {"A", "B", "C", "D", "E"};
+    const int duracoes[] = {2, 3, 3, 2, 1};
+
+    for (size_t i = 0; i < 5; ++i) {
+        assert(grafo_adicionar_vertice(&g, atividades[i]));
+        assert(grafo_definir_duracao(&g, atividades[i], duracoes[i]));
+    }
+
+    /* Criacao das dependencias */
+    assert(grafo_adicionar_aresta(&g, "A", "B"));
+    assert(grafo_adicionar_aresta(&g, "A", "C"));
+    assert(grafo_adicionar_aresta(&g, "B", "D"));
+    assert(grafo_adicionar_aresta(&g, "C", "D"));
+    assert(grafo_adicionar_aresta(&g, "D", "E"));
+
+    size_t n = g.quantidade_vertices;
+
+    int *inicio_cedo = malloc(n * sizeof(int));
+    int *termino_cedo = malloc(n * sizeof(int));
+    int *inicio_tarde = malloc(n * sizeof(int));
+    int *termino_tarde = malloc(n * sizeof(int));
+    int *folgas = NULL;
+    int *eh_critica = NULL;
+
+    assert(inicio_cedo && termino_cedo &&
+           inicio_tarde && termino_tarde);
+
+    int duracao = 0;
+
+    assert(grafo_tempos_mais_cedo(
+        &g, inicio_cedo, termino_cedo, &duracao));
+
+    assert(duracao == 8);
+
+    assert(grafo_tempos_mais_tarde(
+        &g, inicio_tarde, termino_tarde, duracao));
+
+    assert(grafo_calcular_folgas(
+        &g, inicio_cedo, inicio_tarde, &folgas));
+
+    assert(grafo_identificar_caminho_critico(
+        &g, folgas, &eh_critica));
+
+    /* Verifica se todas as cinco atividades sao criticas */
+    for (size_t i = 0; i < n; ++i) {
+        assert(eh_critica[i] == 1);
+    }
+
+    printf("\nTeste de multiplos caminhos criticos:\n");
+
+    assert(grafo_imprimir_caminhos_criticos(
+        &g,
+        inicio_cedo,
+        termino_cedo,
+        eh_critica,
+        duracao));
+
+    free(inicio_cedo);
+    free(termino_cedo);
+    free(inicio_tarde);
+    free(termino_tarde);
+    free(folgas);
+    free(eh_critica);
+
+    grafo_liberar(&g);
+}
+
 int main(void) {
     testar_dag();
     testar_ciclo();
     testar_nao_direcionado();
     testar_conectividade_forte();
-    printf("Todos os testes da Fase I passaram.\n");
+    testar_multiplos_caminhos_criticos();
+    printf("Todos os testes passaram.\n");
     return 0;
 }

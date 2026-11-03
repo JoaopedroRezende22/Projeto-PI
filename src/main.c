@@ -187,6 +187,18 @@ int main(void) {
                         }
                     }
 
+                printf("\nSequencia dos caminhos criticos:\n");
+
+                if (!grafo_imprimir_caminhos_criticos(
+                        &projeto,
+                        inicio_mais_cedo,
+                        termino_mais_cedo,
+                        eh_critica,
+                        duracao_projeto)) {
+
+                    printf("Nao foi possivel reconstruir os caminhos criticos.\n");
+                }
+
                 free(eh_critica);
 
                 } else {
