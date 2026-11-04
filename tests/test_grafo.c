@@ -321,6 +321,69 @@ static void testar_atividades_duracao_zero(void) {
     grafo_liberar(&g);
 }
 
+static void testar_duracao_negativa(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 1));
+
+    assert(grafo_adicionar_vertice(&g, "A"));
+
+    /* Duracao negativa deve ser rejeitada. */
+    assert(!grafo_definir_duracao(&g, "A", -5));
+
+    /* A duracao original deve permanecer inalterada. */
+    int a = grafo_indice_vertice(&g, "A");
+    assert(a >= 0);
+    assert(g.vertices[a].duracao == 0);
+
+    /* Valores validos devem continuar sendo aceitos. */
+    assert(grafo_definir_duracao(&g, "A", 5));
+    assert(g.vertices[a].duracao == 5);
+
+    printf("\nTeste de duracao negativa aprovado.\n");
+
+    grafo_liberar(&g);
+}
+
+static void testar_grafo_sem_atividades(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 0));
+
+    int inicio_mais_cedo[1] = {0};
+    int termino_mais_cedo[1] = {0};
+    int duracao_projeto = 0;
+
+    /* O calculo deve rejeitar um grafo sem atividades. */
+    assert(!grafo_tempos_mais_cedo(
+        &g,
+        inicio_mais_cedo,
+        termino_mais_cedo,
+        &duracao_projeto
+    ));
+
+    printf("\nTeste de grafo sem atividades aprovado.\n");
+
+    grafo_liberar(&g);
+}
+
+static void testar_parametros_nulos(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 1));
+    assert(grafo_adicionar_vertice(&g, "A"));
+
+    int inicio[1] = {0};
+    int termino[1] = {0};
+    int duracao = 0;
+
+    assert(!grafo_tempos_mais_cedo(NULL, inicio, termino, &duracao));
+    assert(!grafo_tempos_mais_cedo(&g, NULL, termino, &duracao));
+    assert(!grafo_tempos_mais_cedo(&g, inicio, NULL, &duracao));
+    assert(!grafo_tempos_mais_cedo(&g, inicio, termino, NULL));
+
+    printf("\nTeste de parametros nulos aprovado.\n");
+
+    grafo_liberar(&g);
+}
+
 int main(void) {
     testar_dag();
     testar_ciclo();
@@ -329,6 +392,9 @@ int main(void) {
     testar_multiplos_caminhos_criticos();
     testar_atividades_independentes();
     testar_atividades_duracao_zero();
+    testar_duracao_negativa();
+    testar_grafo_sem_atividades();
+    testar_parametros_nulos();
     printf("Todos os testes passaram.\n");
     return 0;
 }
