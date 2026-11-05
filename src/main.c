@@ -109,6 +109,122 @@ int main(void) {
         printf("  %s: %d\n", projeto.vertices[i].rotulo, projeto.vertices[i].duracao);
     }
 
+    /* Fase II - Calculo dos tempos no PERT/CPM */
+    size_t n = projeto.quantidade_vertices;
+
+    int *inicio_mais_cedo = malloc(n * sizeof(int));
+    int *termino_mais_cedo = malloc(n * sizeof(int));
+    int *inicio_mais_tarde = malloc(n * sizeof(int));
+    int *termino_mais_tarde = malloc(n * sizeof(int));
+    int duracao_projeto = 0;
+
+    printf("\n--- FASE II: PERT/CPM ---\n");
+
+    if (!inicio_mais_cedo || !termino_mais_cedo ||
+        !inicio_mais_tarde || !termino_mais_tarde) {
+        printf("Erro ao alocar memoria para o PERT/CPM.\n");
+    } else if (grafo_tempos_mais_cedo(
+                   &projeto,
+                   inicio_mais_cedo,
+                   termino_mais_cedo,
+                   &duracao_projeto)) {
+
+        printf("\nTempos mais cedo das tarefas (dias):\n");
+
+        for (size_t i = 0; i < n; ++i) {
+            printf("  Tarefa %s: inicio = %d, termino = %d\n",
+                   projeto.vertices[i].rotulo,
+                   inicio_mais_cedo[i],
+                   termino_mais_cedo[i]);
+        }
+
+        printf("\nDuracao minima do projeto: %d dias\n",
+               duracao_projeto);
+
+        if (grafo_tempos_mais_tarde(
+                &projeto,
+                inicio_mais_tarde,
+                termino_mais_tarde,
+                duracao_projeto)) {
+
+            printf("\nTempos mais tarde das tarefas (dias):\n");
+
+            for (size_t i = 0; i < n; ++i) {
+                printf("  Tarefa %s: inicio = %d, termino = %d\n",
+                       projeto.vertices[i].rotulo,
+                       inicio_mais_tarde[i],
+                       termino_mais_tarde[i]);
+            }
+
+            int *folgas = NULL;
+
+            if (grafo_calcular_folgas(
+                    &projeto,
+                    inicio_mais_cedo,
+                    inicio_mais_tarde,
+                    &folgas)) {
+
+                printf("\nFolgas das tarefas (dias):\n");
+
+                for (size_t i = 0; i < n; ++i) {
+                    printf("  Tarefa %s: folga = %d dia(s)\n",
+                           projeto.vertices[i].rotulo,
+                           folgas[i]);
+                }
+                int *eh_critica = NULL;
+
+                if (grafo_identificar_caminho_critico(
+                        &projeto,
+                        folgas,
+                        &eh_critica)) {
+
+                    printf("\nTarefas do caminho critico:\n");
+
+                    for (size_t i = 0; i < n; ++i) {
+                        if (eh_critica[i]) {
+                            printf("  Tarefa %s\n",
+                                   projeto.vertices[i].rotulo);
+                        }
+                    }
+
+                printf("\nSequencia dos caminhos criticos:\n");
+
+                if (!grafo_imprimir_caminhos_criticos(
+                        &projeto,
+                        inicio_mais_cedo,
+                        termino_mais_cedo,
+                        eh_critica,
+                        duracao_projeto)) {
+
+                    printf("Nao foi possivel reconstruir os caminhos criticos.\n");
+                }
+
+                free(eh_critica);
+
+                } else {
+                    printf("Nao foi possivel identificar o caminho critico.\n");
+                }
+
+                free(folgas);
+
+            } else {
+                printf("Nao foi possivel calcular as folgas.\n");
+            }
+        } else {
+            printf("Nao foi possivel calcular os tempos mais tarde.\n");
+        }
+
+    } else {
+        printf("Nao foi possivel calcular os tempos mais cedo. "
+               "Verifique se o grafo e direcionado, possui tarefas "
+               "e nao contem ciclos.\n");
+    }
+
+    free(inicio_mais_cedo);
+    free(termino_mais_cedo);
+    free(inicio_mais_tarde);
+    free(termino_mais_tarde);
+
     /* Para articulacao, pontes, Euler e coloracao, usamos o grafo subjacente
        nao direcionado das dependencias do projeto. */
     Grafo estrutura;
@@ -160,7 +276,7 @@ int main(void) {
         free(cores);
     }
 
-    printf("\nObservacao: o Caminho Critico, PERT/CPM e a aplicacao da coloracao para alocacao de recursos ficam para a Fase II.\n");
+    printf("\nObservacao: a implementacao da Fase II esta em andamento.\n");
 
     grafo_liberar(&estrutura);
     grafo_liberar(&projeto);

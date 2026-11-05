@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 static int garantir_capacidade_vertices(Grafo *g) {
     if (g->quantidade_vertices < g->capacidade_vertices) return 1;
@@ -325,6 +326,324 @@ static int dfs_topo(const Grafo *g, size_t u, int *estado, size_t *saida, size_t
     return 1;
 }
 
+int grafo_tempos_mais_cedo(
+    const Grafo *g,
+    int *inicio_mais_cedo,
+    int *termino_mais_cedo,
+    int *duracao_projeto
+) {
+    if (!g || !inicio_mais_cedo || !termino_mais_cedo || !duracao_projeto) return 0;
+    if (!g->direcionado || g->quantidade_vertices == 0) return 0;
+
+    size_t *ordem = NULL;
+    size_t tamanho = 0;
+
+    /* A ordenacao topologica tambem confirma que o grafo nao tem ciclos. */
+    if (!grafo_ordenacao_topologica_kahn(g, &ordem, &tamanho)) return 0;
+
+    for (size_t i = 0; i < g->quantidade_vertices; ++i) {
+        if (g->vertices[i].duracao < 0) {
+            free(ordem);
+            return 0;
+        }
+        inicio_mais_cedo[i] = 0;
+        termino_mais_cedo[i] = 0;
+    }
+
+    int maior_termino = 0;
+
+    for (size_t i = 0; i < tamanho; ++i) {
+        size_t u = ordem[i];
+        int duracao = g->vertices[u].duracao;
+
+        if (duracao > INT_MAX - inicio_mais_cedo[u]) {
+            free(ordem);
+            return 0;
+        }
+
+        termino_mais_cedo[u] = inicio_mais_cedo[u] + duracao;
+        if (termino_mais_cedo[u] > maior_termino) {
+            maior_termino = termino_mais_cedo[u];
+        }
+
+        for (Adjacente *a = g->vertices[u].lista; a; a = a->proximo) {
+            size_t v = a->destino;
+            if (termino_mais_cedo[u] > inicio_mais_cedo[v]) {
+                inicio_mais_cedo[v] = termino_mais_cedo[u];
+            }
+        }
+    }
+
+    free(ordem);
+    *duracao_projeto = maior_termino;
+    return 1;
+}
+
+
+int grafo_tempos_mais_tarde(
+    const Grafo *g,
+    int *inicio_mais_tarde,
+    int *termino_mais_tarde,
+    int duracao_projeto
+) {
+    if (!g || !inicio_mais_tarde || !termino_mais_tarde) return 0;
+    if (!g->direcionado || g->quantidade_vertices == 0) return 0;
+    if (duracao_projeto < 0) return 0;
+
+    size_t *ordem = NULL;
+    size_t tamanho = 0;
+
+    /* A ordenacao topologica valida que o grafo nao possui ciclos. */
+    if (!grafo_ordenacao_topologica_kahn(g, &ordem, &tamanho)) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < g->quantidade_vertices; ++i) {
+        if (g->vertices[i].duracao < 0) {
+            free(ordem);
+            return 0;
+        }
+
+        inicio_mais_tarde[i] = 0;
+        termino_mais_tarde[i] = 0;
+    }
+
+    /* Inicialmente, todas as tarefas podem terminar no fim do projeto. */
+    for (size_t i = 0; i < g->quantidade_vertices; ++i) {
+        termino_mais_tarde[i] = duracao_projeto;
+        inicio_mais_tarde[i] =
+            termino_mais_tarde[i] - g->vertices[i].duracao;
+    }
+
+    /* Percorre as tarefas na ordem topologica inversa. */
+    for (size_t i = tamanho; i > 0; --i) {
+        size_t u = ordem[i - 1];
+        int menor_inicio_sucessoras = duracao_projeto;
+        int possui_sucessora = 0;
+
+        for (Adjacente *a = g->vertices[u].lista; a; a = a->proximo) {
+            size_t v = a->destino;
+            possui_sucessora = 1;
+
+            if (inicio_mais_tarde[v] < menor_inicio_sucessoras) {
+                menor_inicio_sucessoras = inicio_mais_tarde[v];
+            }
+        }
+
+        if (possui_sucessora) {
+            termino_mais_tarde[u] = menor_inicio_sucessoras;
+            inicio_mais_tarde[u] =
+                termino_mais_tarde[u] - g->vertices[u].duracao;
+        }
+    }
+
+    free(ordem);
+    return 1;
+}
+
+
+int grafo_calcular_folgas(
+    const Grafo *g,
+    const int *inicio_mais_cedo,
+    const int *inicio_mais_tarde,
+    int **folgas
+) {
+    if (!g || !inicio_mais_cedo || !inicio_mais_tarde || !folgas) {
+        return 0;
+    }
+
+    if (g->quantidade_vertices == 0) {
+        return 0;
+    }
+
+    size_t n = g->quantidade_vertices;
+    int *resultado = malloc(n * sizeof(int));
+
+    if (!resultado) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        resultado[i] = inicio_mais_tarde[i] - inicio_mais_cedo[i];
+
+        if (resultado[i] < 0) {
+            free(resultado);
+            return 0;
+        }
+    }
+
+    *folgas = resultado;
+    return 1;
+}
+
+int grafo_identificar_caminho_critico(
+    const Grafo *g,
+    const int *folgas,
+    int **eh_critica
+) {
+    if (!g || !folgas || !eh_critica) {
+        return 0;
+    }
+
+    if (g->quantidade_vertices == 0) {
+        return 0;
+    }
+
+    size_t n = g->quantidade_vertices;
+
+    int *resultado = malloc(n * sizeof(int));
+
+    if (!resultado) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        if (folgas[i] < 0) {
+            free(resultado);
+            return 0;
+        }
+
+        resultado[i] = (folgas[i] == 0) ? 1 : 0;
+    }
+
+    *eh_critica = resultado;
+
+    return 1;
+}
+
+static void reconstruir_caminhos_criticos(
+    const Grafo *g,
+    size_t atual,
+    const int *inicio_mais_cedo,
+    const int *termino_mais_cedo,
+    const int *eh_critica,
+    int duracao_projeto,
+    size_t *caminho,
+    size_t profundidade,
+    size_t *quantidade_caminhos
+) {
+    caminho[profundidade] = atual;
+
+    int possui_sucessora_critica = 0;
+
+    for (Adjacente *a = g->vertices[atual].lista;
+         a;
+         a = a->proximo) {
+
+        size_t sucessora = a->destino;
+
+        if (eh_critica[sucessora] &&
+            inicio_mais_cedo[sucessora] == termino_mais_cedo[atual]) {
+
+            possui_sucessora_critica = 1;
+
+            reconstruir_caminhos_criticos(
+                g,
+                sucessora,
+                inicio_mais_cedo,
+                termino_mais_cedo,
+                eh_critica,
+                duracao_projeto,
+                caminho,
+                profundidade + 1,
+                quantidade_caminhos
+            );
+        }
+    }
+
+    if (!possui_sucessora_critica &&
+        termino_mais_cedo[atual] == duracao_projeto) {
+
+        printf("Caminho critico %zu: ", *quantidade_caminhos + 1);
+
+        for (size_t i = 0; i <= profundidade; ++i) {
+            printf("%s", g->vertices[caminho[i]].rotulo);
+
+            if (i < profundidade) {
+                printf(" -> ");
+            }
+        }
+
+        printf("\n");
+        (*quantidade_caminhos)++;
+    }
+}
+
+
+int grafo_imprimir_caminhos_criticos(
+    const Grafo *g,
+    const int *inicio_mais_cedo,
+    const int *termino_mais_cedo,
+    const int *eh_critica,
+    int duracao_projeto
+) {
+    if (!g || !inicio_mais_cedo || !termino_mais_cedo ||
+        !eh_critica || !g->direcionado ||
+        g->quantidade_vertices == 0 || duracao_projeto < 0) {
+        return 0;
+    }
+
+    size_t n = g->quantidade_vertices;
+    size_t *caminho = malloc(n * sizeof(size_t));
+
+    if (!caminho) {
+        return 0;
+    }
+
+    size_t quantidade_caminhos = 0;
+
+    for (size_t i = 0; i < n; ++i) {
+        if (!eh_critica[i] || inicio_mais_cedo[i] != 0) {
+            continue;
+        }
+
+        int possui_predecessora_critica = 0;
+
+for (size_t u = 0; u < n; ++u) {
+    for (Adjacente *a = g->vertices[u].lista;
+         a;
+         a = a->proximo) {
+
+        if (a->destino == i &&
+            eh_critica[u] &&
+            termino_mais_cedo[u] == inicio_mais_cedo[i]) {
+
+            possui_predecessora_critica = 1;
+            break;
+        }
+    }
+
+    if (possui_predecessora_critica) {
+        break;
+    }
+}
+
+if (!possui_predecessora_critica &&
+    inicio_mais_cedo[i] == 0) {
+            reconstruir_caminhos_criticos(
+                g,
+                i,
+                inicio_mais_cedo,
+                termino_mais_cedo,
+                eh_critica,
+                duracao_projeto,
+                caminho,
+                0,
+                &quantidade_caminhos
+            );
+        }
+    }
+
+    free(caminho);
+
+    if (quantidade_caminhos == 0) {
+        printf("Nenhum caminho critico completo foi encontrado.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
 int grafo_ordenacao_topologica_dfs(const Grafo *g, size_t **ordem, size_t *tamanho) {
     if (!g || !ordem || !tamanho) return 0;
     *ordem = NULL; *tamanho = 0;
@@ -451,7 +770,17 @@ int grafo_verifica_formula_euler(const Grafo *g, long long *faces) {
 
 int grafo_coloracao_gulosa(const Grafo *g, int **cores, int *quantidade_cores) {
     if (!g || !cores || !quantidade_cores) return 0;
+
+    *cores = NULL;
+    *quantidade_cores = 0;
+
     size_t n = g->quantidade_vertices;
+
+    /* Rejeita grafos com laco. */
+    for (size_t i = 0; i < n; ++i) {
+        if (g->matriz[i * n + i]) return 0;
+    }
+
     *cores = (int *)malloc(n * sizeof(int));
     if (!*cores && n) return 0;
     for (size_t i = 0; i < n; ++i) (*cores)[i] = -1;

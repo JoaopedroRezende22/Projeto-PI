@@ -54,6 +54,48 @@ int digrafo_fortemente_conexo(const Grafo *g);
 int grafo_possui_ciclo(const Grafo *g);
 int grafo_ordenacao_topologica_kahn(const Grafo *g, size_t **ordem, size_t *tamanho);
 int grafo_ordenacao_topologica_dfs(const Grafo *g, size_t **ordem, size_t *tamanho);
+
+/* PERT/CPM: tempos mais cedo */
+int grafo_tempos_mais_cedo(
+    const Grafo *g,
+    int *inicio_mais_cedo,
+    int *termino_mais_cedo,
+    int *duracao_projeto
+);
+
+/* PERT/CPM: tempos mais tarde */
+int grafo_tempos_mais_tarde(
+    const Grafo *g,
+    int *inicio_mais_tarde,
+    int *termino_mais_tarde,
+    int duracao_projeto
+);
+
+
+/* PERT/CPM: calculo das folgas */
+int grafo_calcular_folgas(
+    const Grafo *g,
+    const int *inicio_mais_cedo,
+    const int *inicio_mais_tarde,
+    int **folgas
+);
+
+/* PERT/CPM: identificacao das tarefas do caminho critico */
+int grafo_identificar_caminho_critico(
+    const Grafo *g,
+    const int *folgas,
+    int **eh_critica
+);
+
+/* PERT/CPM: impressao de todos os caminhos criticos */
+int grafo_imprimir_caminhos_criticos(
+    const Grafo *g,
+    const int *inicio_mais_cedo,
+    const int *termino_mais_cedo,
+    const int *eh_critica,
+    int duracao_projeto
+);
+
 int grafo_vertices_articulacao(const Grafo *g, int **eh_articulacao);
 int grafo_pontes(const Grafo *g, int **eh_ponte);
 
