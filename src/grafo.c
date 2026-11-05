@@ -770,7 +770,17 @@ int grafo_verifica_formula_euler(const Grafo *g, long long *faces) {
 
 int grafo_coloracao_gulosa(const Grafo *g, int **cores, int *quantidade_cores) {
     if (!g || !cores || !quantidade_cores) return 0;
+
+    *cores = NULL;
+    *quantidade_cores = 0;
+
     size_t n = g->quantidade_vertices;
+
+    /* Rejeita grafos com laco. */
+    for (size_t i = 0; i < n; ++i) {
+        if (g->matriz[i * n + i]) return 0;
+    }
+
     *cores = (int *)malloc(n * sizeof(int));
     if (!*cores && n) return 0;
     for (size_t i = 0; i < n; ++i) (*cores)[i] = -1;

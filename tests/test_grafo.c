@@ -384,6 +384,126 @@ static void testar_parametros_nulos(void) {
     grafo_liberar(&g);
 }
 
+static void testar_coloracao_vertices_isolados(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 0));
+
+    assert(grafo_adicionar_aresta(&g, "A", "B"));
+    assert(grafo_adicionar_vertice(&g, "C"));
+    assert(grafo_adicionar_vertice(&g, "D"));
+
+    int *cores = NULL;
+    int quantidade_cores = 0;
+
+    assert(grafo_coloracao_gulosa(&g, &cores, &quantidade_cores));
+
+    int a = grafo_indice_vertice(&g, "A");
+    int b = grafo_indice_vertice(&g, "B");
+    int c = grafo_indice_vertice(&g, "C");
+    int d = grafo_indice_vertice(&g, "D");
+
+    assert(a >= 0 && b >= 0 && c >= 0 && d >= 0);
+
+    assert(cores[a] != cores[b]);
+    assert(cores[c] == cores[d]);
+    assert(quantidade_cores == 2);
+
+    printf("\nTeste de coloracao com vertices isolados aprovado.\n");
+
+    free(cores);
+    grafo_liberar(&g);
+}
+
+static void testar_coloracao_direcionada(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 1));
+
+    assert(grafo_adicionar_aresta(&g, "A", "B"));
+    assert(grafo_adicionar_aresta(&g, "B", "C"));
+
+    int *cores = NULL;
+    int quantidade_cores = 0;
+
+    assert(grafo_coloracao_gulosa(&g, &cores, &quantidade_cores));
+
+    int a = grafo_indice_vertice(&g, "A");
+    int b = grafo_indice_vertice(&g, "B");
+    int c = grafo_indice_vertice(&g, "C");
+
+    assert(cores[a] != cores[b]);
+    assert(cores[b] != cores[c]);
+    assert(cores[a] == cores[c]);
+    assert(quantidade_cores == 2);
+
+    printf("\nTeste de coloracao direcionada aprovado.\n");
+
+    free(cores);
+    grafo_liberar(&g);
+}
+
+static void testar_coloracao_triangulo(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 0));
+
+    assert(grafo_adicionar_aresta(&g, "A", "B"));
+    assert(grafo_adicionar_aresta(&g, "B", "C"));
+    assert(grafo_adicionar_aresta(&g, "C", "A"));
+
+    int *cores = NULL;
+    int quantidade_cores = 0;
+
+    assert(grafo_coloracao_gulosa(&g, &cores, &quantidade_cores));
+
+    int a = grafo_indice_vertice(&g, "A");
+    int b = grafo_indice_vertice(&g, "B");
+    int c = grafo_indice_vertice(&g, "C");
+
+    assert(cores[a] != cores[b]);
+    assert(cores[b] != cores[c]);
+    assert(cores[a] != cores[c]);
+    assert(quantidade_cores == 3);
+
+    printf("\nTeste de coloracao de triangulo aprovado.\n");
+
+    free(cores);
+    grafo_liberar(&g);
+}
+
+static void testar_coloracao_grafo_vazio(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 0));
+
+    int *cores = NULL;
+    int quantidade_cores = -1;
+
+    assert(grafo_coloracao_gulosa(&g, &cores, &quantidade_cores));
+    assert(quantidade_cores == 0);
+
+    free(cores);
+    grafo_liberar(&g);
+
+    printf("Teste de coloracao com grafo vazio aprovado.\n");
+}
+
+static void testar_coloracao_com_laco(void) {
+    Grafo g;
+    assert(grafo_inicializar(&g, 0));
+
+    assert(grafo_adicionar_aresta(&g, "A", "A"));
+
+    int *cores = NULL;
+    int quantidade_cores = 0;
+
+    assert(!grafo_coloracao_gulosa(&g, &cores, &quantidade_cores));
+    assert(cores == NULL);
+    assert(quantidade_cores == 0);
+
+    free(cores);
+    grafo_liberar(&g);
+
+    printf("Teste de coloracao com laco aprovado.\n");
+}
+
 int main(void) {
     testar_dag();
     testar_ciclo();
@@ -395,6 +515,11 @@ int main(void) {
     testar_duracao_negativa();
     testar_grafo_sem_atividades();
     testar_parametros_nulos();
+    testar_coloracao_vertices_isolados();
+    testar_coloracao_direcionada();
+    testar_coloracao_triangulo();
+    testar_coloracao_grafo_vazio();
+    testar_coloracao_com_laco();
     printf("Todos os testes passaram.\n");
     return 0;
 }
